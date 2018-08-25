@@ -5,43 +5,51 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
+import java.io.PrintWriter;
 
 @WebServlet(value = "/Sess02") public class Sess02 extends HttpServlet {
 
-    @Override protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        HttpSession session = req.getSession();
-        List<Integer> scores = new LinkedList<>();
-        if (session.getAttribute("scores") != null) {
-            scores = (List<Integer>) session.getAttribute("scores");
+    @Override protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        Integer[] scores = (Integer[]) request.getSession().getAttribute("scores");
+        if (scores == null) {
+            scores = new Integer[0];
         }
-        int sum = 0;
-        for (int s : scores) {
-            sum += s;
+        response.setCharacterEncoding("utf-8");
+        PrintWriter writer = response.getWriter();
+        writer.append("<html><head><meta charset=\"UTF-8\"></head><body>");
+        writer.append("<form method=\"post\"><input name=\"score\"/><input type=\"submit\"/></form>");
+        writer.append("<ul>");
+        long sum = 0;
+        for (int score : scores) {
+            writer.append("<li>" + score + "</li>");
+            sum += score;
         }
-        resp.getWriter().println(
-                "<html><body><form action=\"Sess02\" method=\"post\">\n" + "    <input type=\"text\" name=\"score\"/>\n" + "    <input type=\"submit\"/>\n"
-                        + "</form></body></html>");
-        resp.getWriter().println("Średnia: " + ((double) sum / scores.size()));
+        writer.append("</ul>");
+        if (scores.length > 0) {
+            writer.append("<p>Średnia: " + ((double) sum / scores.length) + "</p>");
+        }
+        writer.append("</body></html>");
     }
 
-    @Override protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String score = req.getParameter("score");
-        int scoreInt = Integer.valueOf(score);
-        if ((scoreInt < 1) || (scoreInt > 6)) {
-            resp.getWriter().println("niepoprawne dane");
-            return;
+    @Override protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        int score = Integer.valueOf(request.getParameter("score"));
+        if ((score >= 1) && (score <= 6)) {
+            Integer[] scores = (Integer[]) request.getSession().getAttribute("scores");
+            if (scores == null) {
+                scores = new Integer[0];
+            }
+            Integer[] scoresNew = new Integer[scores.length + 1];
+            for (int i = 0; i < scores.length; ++i) {
+                scoresNew[i] = scores[i];
+            }
+            scoresNew[scores.length] = score;
+            request.getSession().setAttribute("scores", scoresNew);
+            response.sendRedirect("Sess02");
+        } else {
+            response.setCharacterEncoding("utf-8");
+            PrintWriter writer = response.getWriter();
+            writer.append("<html><head><meta charset=\"UTF-8\"></head><body>Niepoprawna ocena</body></html>");
         }
-        HttpSession session = req.getSession();
-        List<Integer> scores = new LinkedList<>();
-        if (session.getAttribute("scores") != null) {
-            scores = (List<Integer>) session.getAttribute("scores");
-        }
-        scores.add(scoreInt);
-        session.setAttribute("scores", scores);
-        doGet(req, resp);
     }
 }
